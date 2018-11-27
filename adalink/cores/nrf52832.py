@@ -51,15 +51,15 @@ SEGGER_LOOKUP = {
 }
 
 class nRF52832_STLink(STLink):
-    # nRF51822-specific STLink-based programmer.  Required to add custom
-    # wipe and erase before programming needed for the nRF51822 & OpenOCD.
+    # nRF52832-specific STLink-based programmer.  Required to add custom
+    # wipe and erase before programming needed for the nRF52832 & OpenOCD.
 
     def __init__(self):
-        # Call base STLink initializer and set it up to program the nRF51822.
+        # Call base STLink initializer and set it up to program the nRF52832.
         super(nRF52832_STLink, self).__init__(params='-f interface/stlink-v2.cfg -f target/nrf52.cfg')
 
     def wipe(self):
-        # Run OpenOCD commands to wipe nRF51822 memory.
+        # Run OpenOCD commands to wipe nRF52832 memory.
         commands = [
             'init',
             'reset init',
@@ -73,7 +73,7 @@ class nRF52832_STLink(STLink):
         # Program the nRF52832 with the provided hex files.  Note that programming
         # the soft device and bootloader requires erasing the memory so it will
         # always be done.
-        click.echo('WARNING: Flash memory will be erased before programming nRF51822 with the STLink!')
+        click.echo('WARNING: Flash memory will be erased before programming nRF52832 with the STLink!')
         commands = [
             'init',
             'reset init',
