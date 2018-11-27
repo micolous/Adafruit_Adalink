@@ -6,7 +6,7 @@ import os
 import click
 
 from ..core import Core
-from ..programmers import JLink
+from ..programmers import JLink, STLink
 
 
 # CONFIGID register HW ID value to name mapping.
@@ -50,6 +50,49 @@ SEGGER_LOOKUP = {
     0x0000: 'nRF52832_xxaa'
 }
 
+class nRF52832_STLink(STLink):
+    # nRF51822-specific STLink-based programmer.  Required to add custom
+    # wipe and erase before programming needed for the nRF51822 & OpenOCD.
+
+    def __init__(self):
+        # Call base STLink initializer and set it up to program the nRF51822.
+        super(nRF52832_STLink, self).__init__(params='-f interface/stlink-v2.cfg -f target/nrf52.cfg')
+
+    def wipe(self):
+        # Run OpenOCD commands to wipe nRF51822 memory.
+        commands = [
+            'init',
+            'reset init',
+            'halt',
+            'nrf52 mass_erase',
+            'exit'
+        ]
+        self.run_commands(commands)
+
+    def program(self, hex_files=[], bin_files=[]):
+        # Program the nRF52832 with the provided hex files.  Note that programming
+        # the soft device and bootloader requires erasing the memory so it will
+        # always be done.
+        click.echo('WARNING: Flash memory will be erased before programming nRF51822 with the STLink!')
+        commands = [
+            'init',
+            'reset init',
+            'halt',
+            'nrf52 mass_erase'
+        ]
+        # Program each hex file.
+        for f in hex_files:
+            f = self.escape_path(os.path.abspath(f))
+            commands.append('flash write_image {0} 0 ihex'.format(f))
+        # Program each bin file.
+        for f, addr in bin_files:
+            f = self.escape_path(os.path.abspath(f))
+            commands.append('flash write_image {0} 0x{1:08X} bin'.format(f, addr))
+        commands.append('reset run')
+        commands.append('exit')
+        self.run_commands(commands)
+
+
 class nRF52832_JLink(JLink):
     # nRF52832-specific JLink programmer, required to add custom wipe command
     # for the chip.
@@ -80,7 +123,7 @@ class nRF52832(Core):
 
     def list_programmers(self):
         """Return a list of the programmer names supported by this CPU."""
-        return ['jlink']
+        return ['jlink', 'stlink']
 
     def create_programmer(self, programmer):
         """Create and return a programmer instance that will be used to program
@@ -88,6 +131,8 @@ class nRF52832(Core):
         """
         if programmer == 'jlink':
             return nRF52832_JLink()
+        elif programmer == 'stlink':
+            return nRF52832_STLink()
 
     def info(self, programmer):
         """Display info about the device."""
